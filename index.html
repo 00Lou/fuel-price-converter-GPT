@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fuel Price Converter & US–UK Comparison</title>
+<title>Fuel Price Converter & Comparison</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body {
     font-family: system-ui, sans-serif;
     background: #f4f6f9;
-    max-width: 900px;
+    max-width: 1000px;
     margin: auto;
     padding: 20px;
 }
@@ -17,7 +17,7 @@ h1, h2 {
 }
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
     gap: 20px;
 }
 .card {
@@ -61,12 +61,8 @@ button:hover {
     color: #555;
     text-align: center;
 }
-.cheaper {
-    color: green;
-}
-.expensive {
-    color: crimson;
-}
+.cheaper { color: green; }
+.expensive { color: crimson; }
 </style>
 </head>
 
@@ -76,7 +72,7 @@ button:hover {
 
 <div class="grid">
 
-<!-- General Converter -->
+<!-- Converter -->
 <div class="card">
 <h2>Live Fuel Price Converter</h2>
 
@@ -109,6 +105,12 @@ button:hover {
 <div class="card">
 <h2>US vs UK Pump Comparison</h2>
 
+<label>Fuel Type</label>
+<select id="fuelType">
+    <option value="petrol">Petrol</option>
+    <option value="diesel">Diesel</option>
+</select>
+
 <label>US Price (USD per gallon)</label>
 <input type="number" id="usPrice" value="4" step="0.01">
 
@@ -126,7 +128,6 @@ button:hover {
 <script>
 const GALLON_TO_LITRE = 3.785411784;
 let rates = {};
-let currencies = ["USD", "GBP", "EUR", "CAD", "AUD"];
 
 async function loadRates() {
     try {
@@ -135,68 +136,68 @@ async function loadRates() {
         rates = data.rates;
         rates.USD = 1;
 
-        populateCurrencies();
+        populateCurrencies(Object.keys(rates));
         document.getElementById("rateInfo").innerText =
-            "Live exchange rates loaded (base USD).";
+            "Live exchange rates loaded.";
     } catch {
         document.getElementById("rateInfo").innerText =
             "Exchange rate service unavailable.";
     }
 }
 
-function populateCurrencies() {
+function populateCurrencies(currencyList) {
     const from = document.getElementById("fromCurrency");
     const to = document.getElementById("toCurrency");
-    currencies.forEach(c => {
-        from.innerHTML += `<option>${c}</option>`;
-        to.innerHTML += `<option>${c}</option>`;
+
+    currencyList.sort().forEach(c => {
+        from.innerHTML += `<option value="${c}">${c}</option>`;
+        to.innerHTML += `<option value="${c}">${c}</option>`;
     });
+
     from.value = "USD";
     to.value = "GBP";
 }
 
 function convert() {
-    let price = parseFloat(priceInput.value);
-    let fromUnit = fromUnitInput.value;
-    let toUnit = toUnitInput.value;
-    let fromCur = fromCurrency.value;
-    let toCur = toCurrency.value;
+    const price = parseFloat(document.getElementById("price").value);
+    const fromUnit = document.getElementById("fromUnit").value;
+    const toUnit = document.getElementById("toUnit").value;
+    const fromCur = document.getElementById("fromCurrency").value;
+    const toCur = document.getElementById("toCurrency").value;
 
     let adjusted = price;
-    if (fromUnit === "gallon" && toUnit === "litre") adjusted /= GALLON_TO_LITRE;
-    if (fromUnit === "litre" && toUnit === "gallon") adjusted *= GALLON_TO_LITRE;
 
-    let usd = adjusted / rates[fromCur];
-    let final = usd * rates[toCur];
+    if (fromUnit === "gallon" && toUnit === "litre")
+        adjusted /= GALLON_TO_LITRE;
+    if (fromUnit === "litre" && toUnit === "gallon")
+        adjusted *= GALLON_TO_LITRE;
 
-    convertResult.innerText =
+    const usd = adjusted / rates[fromCur];
+    const final = usd * rates[toCur];
+
+    document.getElementById("convertResult").innerText =
         `${final.toFixed(3)} ${toCur} per ${toUnit}`;
 }
 
 function compare() {
-    let us = parseFloat(usPrice.value);   // USD/gallon
-    let uk = parseFloat(ukPrice.value);   // GBP/litre
+    const fuel = document.getElementById("fuelType").value;
+    const us = parseFloat(document.getElementById("usPrice").value);
+    const uk = parseFloat(document.getElementById("ukPrice").value);
 
-    let usLitreGBP =
+    const usGBPPerLitre =
         (us / GALLON_TO_LITRE) * rates.GBP;
 
-    let diff = usLitreGBP - uk;
+    const diff = usGBPPerLitre - uk;
 
-    compareResult.innerHTML = `
-        US price: £${usLitreGBP.toFixed(3)} per litre<br>
+    document.getElementById("compareResult").innerHTML = `
+        Fuel type: <strong>${fuel.charAt(0).toUpperCase() + fuel.slice(1)}</strong><br><br>
+        US price: £${usGBPPerLitre.toFixed(3)} per litre<br>
         UK price: £${uk.toFixed(3)} per litre<br><br>
         <span class="${diff < 0 ? 'cheaper' : 'expensive'}">
             ${diff < 0 ? "US fuel is cheaper" : "UK fuel is cheaper"}
         </span>
     `;
 }
-
-const priceInput = document.getElementById("price");
-const fromUnitInput = document.getElementById("fromUnit");
-const toUnitInput = document.getElementById("toUnit");
-const fromCurrency = document.getElementById("fromCurrency");
-const toCurrency = document.getElementById("toCurrency");
-const convertResult = document.getElementById("convertResult");
 
 loadRates();
 </script>
