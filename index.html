@@ -115,7 +115,7 @@ button {
 <div class="container">
     <h1>Fuel Price Converter</h1>
     <div class="subtitle">
-        Enter prices in pence / cents (e.g. UK 139.9, US 379.9)
+        Enter prices in standard currency units (e.g. £1.45, $3.79)
     </div>
 
     <div class="card">
@@ -123,7 +123,7 @@ button {
 
             <div>
                 <label>Prices (one per line)</label>
-                <textarea id="prices" placeholder="139.9&#10;145.3&#10;152.7"></textarea>
+                <textarea id="prices" placeholder="1.45&#10;1.52&#10;1.61"></textarea>
             </div>
 
             <div>
@@ -178,14 +178,6 @@ const LITRES = {
     impg: 4.54609
 };
 
-const SUBUNITS = {
-    GBP: 100,
-    USD: 100,
-    EUR: 100,
-    CAD: 100,
-    AUD: 100
-};
-
 let rates = {};
 
 async function loadRates() {
@@ -199,12 +191,12 @@ async function loadRates() {
 }
 
 function convertBatch() {
-    const lines = document.getElementById("prices").value
+    const values = document.getElementById("prices").value
         .split("\n")
-        .map(l => parseFloat(l.trim()))
+        .map(v => parseFloat(v.trim()))
         .filter(v => !isNaN(v));
 
-    if (!lines.length) return;
+    if (!values.length) return;
 
     const fromUnit = fromUnitEl.value;
     const toUnit = toUnitEl.value;
@@ -213,20 +205,19 @@ function convertBatch() {
 
     let output = "<strong>Converted prices:</strong><br><br>";
 
-    lines.forEach(v => {
-        let major = v / SUBUNITS[fromCur];            // cents → dollars
-        let perLitre = major / LITRES[fromUnit];      // unit → litre
-        let eur = perLitre / rates[fromCur];          // → EUR
-        let converted = eur * rates[toCur];           // → target currency
-        converted *= LITRES[toUnit];                  // litre → unit
+    values.forEach(v => {
+        let perLitre = v / LITRES[fromUnit];
+        let eur = perLitre / rates[fromCur];
+        let converted = eur * rates[toCur];
+        converted *= LITRES[toUnit];
 
-        output += `${v.toFixed(1)} → ${converted.toFixed(3)} ${toCur} per ${label(toUnit)}<br>`;
+        output += `${v.toFixed(3)} → ${converted.toFixed(3)} ${toCur} per ${unitLabel(toUnit)}<br>`;
     });
 
     result.innerHTML = output;
 }
 
-function label(u) {
+function unitLabel(u) {
     if (u === "litre") return "litre";
     if (u === "usg") return "US gallon";
     if (u === "impg") return "Imperial gallon";
