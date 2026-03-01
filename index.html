@@ -53,13 +53,19 @@ button:hover { background: #1e40af; }
     text-align: center;
 }
 .small {
-    margin-top: 10px;
+    margin-top: 12px;
     font-size: 0.85rem;
     color: #555;
     text-align: center;
 }
 .cheaper { color: green; }
 .expensive { color: crimson; }
+.footer {
+    margin-top: 20px;
+    font-size: 0.8rem;
+    color: #444;
+    text-align: center;
+}
 </style>
 </head>
 
@@ -122,14 +128,18 @@ button:hover { background: #1e40af; }
 
 <p class="small" id="rateInfo">Loading live exchange rates…</p>
 
+<div class="footer" id="rateSource"></div>
+
 <script>
-/* --- CONSTANTS --- */
+/* ---------------- CONSTANTS ---------------- */
 const GALLON_TO_LITRE = 3.785411784;
 
-/* --- GLOBAL RATES --- */
+/* ---------------- GLOBAL DATA ---------------- */
 let rates = {};
+let rateDate = "";
+let fetchedAt = "";
 
-/* --- LOAD RATES (ECB / Frankfurter) --- */
+/* ---------------- LOAD EXCHANGE RATES ---------------- */
 async function loadRates() {
     try {
         const res = await fetch("https://api.frankfurter.app/latest?from=USD");
@@ -138,16 +148,18 @@ async function loadRates() {
         rates = data.rates;
         rates.USD = 1;
 
+        rateDate = data.date; // ECB rate date
+        fetchedAt = new Date().toLocaleString();
+
         populateCurrencies();
-        document.getElementById("rateInfo").innerText =
-            "Live exchange rates loaded (ECB).";
+        updateRateInfo();
     } catch (e) {
         document.getElementById("rateInfo").innerText =
             "Exchange rate service unavailable.";
     }
 }
 
-/* --- POPULATE CURRENCY DROPDOWNS --- */
+/* ---------------- UI HELPERS ---------------- */
 function populateCurrencies() {
     const from = document.getElementById("fromCurrency");
     const to = document.getElementById("toCurrency");
@@ -164,7 +176,18 @@ function populateCurrencies() {
     to.value = "GBP";
 }
 
-/* --- CONVERTER --- */
+function updateRateInfo() {
+    document.getElementById("rateInfo").innerText =
+        `Exchange rates last updated: ${rateDate} (ECB reference rates)`;
+
+    document.getElementById("rateSource").innerHTML = `
+        Rates fetched at: ${fetchedAt}<br>
+        Source: European Central Bank (via Frankfurter API)<br>
+        https://www.ecb.europa.eu
+    `;
+}
+
+/* ---------------- CONVERTER ---------------- */
 function convert() {
     const price = parseFloat(document.getElementById("price").value);
     const fromUnit = document.getElementById("fromUnit").value;
@@ -176,22 +199,21 @@ function convert() {
 
     let value = price;
 
-    // UNIT CONVERSION (this was the broken part before)
-    if (fromUnit === "gallon" && toUnit === "litre") {
-        value = value / GALLON_TO_LITRE;
-    } else if (fromUnit === "litre" && toUnit === "gallon") {
-        value = value * GALLON_TO_LITRE;
-    }
+    // Unit conversion
+    if (fromUnit === "gallon" && toUnit === "litre")
+        value /= GALLON_TO_LITRE;
+    else if (fromUnit === "litre" && toUnit === "gallon")
+        value *= GALLON_TO_LITRE;
 
-    // CURRENCY CONVERSION
-    value = value / rates[fromCur]; // to USD
-    value = value * rates[toCur];   // to target
+    // Currency conversion
+    value = value / rates[fromCur];
+    value = value * rates[toCur];
 
     document.getElementById("convertResult").innerText =
         `${value.toFixed(3)} ${toCur} per ${toUnit}`;
 }
 
-/* --- COMPARISON --- */
+/* ---------------- COMPARISON ---------------- */
 function compare() {
     const fuel = document.getElementById("fuelType").value;
     const us = parseFloat(document.getElementById("usPrice").value);
@@ -199,9 +221,11 @@ function compare() {
 
     if (isNaN(us) || isNaN(uk)) return;
 
-    // USD per gallon → GBP per litre
-    let usGBPPerLitre = (us / GALLON_TO_LITRE) * rates.GBP;
-    let diff = usGBPPerLitre - uk;
+    // USD/gal → GBP/litre
+    const usGBPPerLitre =
+        (us / GALLON_TO_LITRE) * rates.GBP;
+
+    const diff = usGBPPerLitre - uk;
 
     document.getElementById("compareResult").innerHTML = `
         <strong>${fuel}</strong><br><br>
