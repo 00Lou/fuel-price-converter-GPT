@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fuel Price Converter GPT</title>
+<title>Fuel Price Converter</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -25,7 +25,7 @@ body {
 }
 
 .container {
-    max-width: 980px;
+    max-width: 900px;
     width: 100%;
     padding: 24px;
 }
@@ -50,7 +50,7 @@ h1 {
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 18px;
 }
 
@@ -61,7 +61,7 @@ label {
     display: block;
 }
 
-input, select, textarea {
+input, select {
     width: 100%;
     padding: 10px;
     border-radius: 8px;
@@ -71,12 +71,7 @@ input, select, textarea {
     font-size: 1rem;
 }
 
-textarea {
-    min-height: 120px;
-    resize: vertical;
-}
-
-input:focus, select:focus, textarea:focus {
+input:focus, select:focus {
     outline: 2px solid var(--accent);
 }
 
@@ -98,7 +93,8 @@ button {
     padding: 16px;
     background: #020617;
     border-radius: 10px;
-    font-size: .95rem;
+    font-size: 1rem;
+    text-align: center;
 }
 
 .footer {
@@ -115,15 +111,15 @@ button {
 <div class="container">
     <h1>Fuel Price Converter</h1>
     <div class="subtitle">
-        Enter prices in standard currency units (e.g. £1.45, $3.79)
+        Convert fuel prices between units and currencies using live exchange rates
     </div>
 
     <div class="card">
         <div class="grid">
 
             <div>
-                <label>Prices (one per line)</label>
-                <textarea id="prices" placeholder="1.45&#10;1.52&#10;1.61"></textarea>
+                <label>Price</label>
+                <input type="number" id="price" placeholder="e.g. 1.45">
             </div>
 
             <div>
@@ -133,8 +129,10 @@ button {
                     <option value="usg">Per US gallon</option>
                     <option value="impg">Per Imperial gallon</option>
                 </select>
+            </div>
 
-                <label style="margin-top:12px;">From currency</label>
+            <div>
+                <label>From currency</label>
                 <select id="fromCurrency">
                     <option>GBP</option>
                     <option>USD</option>
@@ -142,15 +140,19 @@ button {
                     <option>CAD</option>
                     <option>AUD</option>
                 </select>
+            </div>
 
-                <label style="margin-top:12px;">To unit</label>
+            <div>
+                <label>To unit</label>
                 <select id="toUnit">
                     <option value="litre">Per litre</option>
                     <option value="usg">Per US gallon</option>
                     <option value="impg">Per Imperial gallon</option>
                 </select>
+            </div>
 
-                <label style="margin-top:12px;">To currency</label>
+            <div>
+                <label>To currency</label>
                 <select id="toCurrency">
                     <option>GBP</option>
                     <option>USD</option>
@@ -162,7 +164,7 @@ button {
 
         </div>
 
-        <button onclick="convertBatch()">Convert batch</button>
+        <button onclick="convert()">Convert</button>
 
         <div class="result" id="result">—</div>
     </div>
@@ -190,31 +192,22 @@ async function loadRates() {
         `Exchange rates last updated: ${data.date} (ECB reference rates)`;
 }
 
-function convertBatch() {
-    const values = document.getElementById("prices").value
-        .split("\n")
-        .map(v => parseFloat(v.trim()))
-        .filter(v => !isNaN(v));
-
-    if (!values.length) return;
+function convert() {
+    const price = parseFloat(document.getElementById("price").value);
+    if (isNaN(price)) return;
 
     const fromUnit = fromUnitEl.value;
     const toUnit = toUnitEl.value;
     const fromCur = fromCurrency.value;
     const toCur = toCurrency.value;
 
-    let output = "<strong>Converted prices:</strong><br><br>";
+    let perLitre = price / LITRES[fromUnit];
+    let eur = perLitre / rates[fromCur];
+    let converted = eur * rates[toCur];
+    converted *= LITRES[toUnit];
 
-    values.forEach(v => {
-        let perLitre = v / LITRES[fromUnit];
-        let eur = perLitre / rates[fromCur];
-        let converted = eur * rates[toCur];
-        converted *= LITRES[toUnit];
-
-        output += `${v.toFixed(3)} → ${converted.toFixed(3)} ${toCur} per ${unitLabel(toUnit)}<br>`;
-    });
-
-    result.innerHTML = output;
+    result.innerHTML =
+        `${converted.toFixed(3)} ${toCur} per ${unitLabel(toUnit)}`;
 }
 
 function unitLabel(u) {
