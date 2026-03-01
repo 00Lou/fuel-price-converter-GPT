@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fuel Price & Station Comparator</title>
+<title>Fuel Price Comparator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body {
@@ -12,24 +12,26 @@ body {
     margin: auto;
     padding: 20px;
 }
-h1, h2 { text-align: center; }
+h1, h2 {
+    text-align: center;
+}
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
     gap: 20px;
 }
 .card {
-    background: white;
+    background: #fff;
     padding: 18px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,.08);
 }
 label {
     display: block;
-    margin-top: 10px;
+    margin-top: 12px;
     font-weight: 600;
 }
-input, select {
+select, input {
     width: 100%;
     padding: 8px;
     margin-top: 4px;
@@ -45,21 +47,30 @@ button {
     border-radius: 6px;
     cursor: pointer;
 }
-button:hover { background: #1e40af; }
+button:hover {
+    background: #1e40af;
+}
 .station {
     border-top: 1px solid #ddd;
-    padding-top: 10px;
     margin-top: 10px;
+    padding-top: 10px;
 }
 .result {
-    margin-top: 12px;
+    margin-top: 14px;
     font-weight: bold;
     text-align: center;
 }
 .small {
+    margin-top: 12px;
     font-size: 0.8rem;
     color: #555;
     text-align: center;
+}
+.notice {
+    background: #eef2ff;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
     margin-top: 10px;
 }
 </style>
@@ -69,18 +80,23 @@ button:hover { background: #1e40af; }
 
 <h1>Fuel Price & Station Comparator</h1>
 
+<div class="notice">
+<strong>Important:</strong> Station locations are real. Fuel prices are <em>national averages</em>.
+Live station-level prices are not publicly available in the UK or US.
+</div>
+
 <div class="grid">
 
-<!-- LOCATION & STATIONS -->
+<!-- STATIONS -->
 <div class="card">
 <h2>Nearest Fuel Stations</h2>
-<button onclick="locate()">Find my nearest stations</button>
+<button onclick="locate()">Find nearest stations</button>
 <div id="stations"></div>
 </div>
 
 <!-- PRICE COMPARISON -->
 <div class="card">
-<h2>Cross-Country Fuel Comparison</h2>
+<h2>Average Fuel Price Comparison</h2>
 
 <label>Fuel type</label>
 <select id="fuelType">
@@ -88,45 +104,45 @@ button:hover { background: #1e40af; }
     <option value="diesel">Diesel</option>
 </select>
 
-<label>Compare my country to</label>
-<select id="compareCountry">
-    <option value="US">United States</option>
-    <option value="UK">United Kingdom</option>
+<label>Compare</label>
+<select id="comparison">
+    <option value="UK_US">United Kingdom → United States</option>
+    <option value="US_UK">United States → United Kingdom</option>
 </select>
 
-<button onclick="compare()">Compare average prices</button>
+<button onclick="compare()">Compare prices</button>
 <div class="result" id="compareResult"></div>
 </div>
 
 </div>
 
 <p class="small" id="rateInfo">Loading exchange rates…</p>
+
 <p class="small">
-Station locations © OpenStreetMap contributors<br>
-Fuel prices shown are <strong>national averages</strong>, not live station prices
+Station data © OpenStreetMap contributors<br>
+Exchange rates © European Central Bank (via Frankfurter API)
 </p>
 
 <script>
-/* ---------------- CONSTANTS ---------------- */
+/* -------- CONSTANTS -------- */
 const GALLON_TO_LITRE = 3.785411784;
 
-/* National average prices (approximate, clearly labelled) */
-const AVERAGE_PRICES = {
-    US: {
-        petrol: { value: 3.60, unit: "gallon", currency: "USD" },
-        diesel: { value: 4.10, unit: "gallon", currency: "USD" }
-    },
+/* -------- AVERAGE PRICES (clearly labelled) -------- */
+const AVERAGES = {
     UK: {
         petrol: { value: 1.45, unit: "litre", currency: "GBP" },
         diesel: { value: 1.55, unit: "litre", currency: "GBP" }
+    },
+    US: {
+        petrol: { value: 3.60, unit: "gallon", currency: "USD" },
+        diesel: { value: 4.10, unit: "gallon", currency: "USD" }
     }
 };
 
 let rates = {};
 let rateDate = "";
-let fetchedAt = "";
 
-/* ---------------- LOAD EXCHANGE RATES ---------------- */
+/* -------- EXCHANGE RATES -------- */
 async function loadRates() {
     try {
         const res = await fetch("https://api.frankfurter.app/latest?from=USD");
@@ -134,17 +150,16 @@ async function loadRates() {
         rates = data.rates;
         rates.USD = 1;
         rateDate = data.date;
-        fetchedAt = new Date().toLocaleString();
 
         document.getElementById("rateInfo").innerText =
-            `Exchange rates: ECB (${rateDate}), fetched ${fetchedAt}`;
+            `Exchange rates reference date: ${rateDate}`;
     } catch {
         document.getElementById("rateInfo").innerText =
-            "Exchange rate service unavailable.";
+            "Exchange rates unavailable.";
     }
 }
 
-/* ---------------- GEOLOCATION ---------------- */
+/* -------- GEOLOCATION -------- */
 function locate() {
     if (!navigator.geolocation) {
         alert("Geolocation not supported");
@@ -167,62 +182,48 @@ async function loadStations(lat, lon) {
         method: "POST",
         body: query
     });
-
     const data = await res.json();
-    displayStations(data.elements.slice(0, 5));
+    renderStations(data.elements.slice(0, 5));
 }
 
-function displayStations(stations) {
-    const container = document.getElementById("stations");
-    container.innerHTML = "";
+function renderStations(stations) {
+    const el = document.getElementById("stations");
+    el.innerHTML = "";
 
     stations.forEach(s => {
-        container.innerHTML += `
+        el.innerHTML += `
         <div class="station">
             <strong>${s.tags.name || "Unnamed station"}</strong><br>
             Fuel: petrol / diesel<br>
-            Location: ${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}<br>
+            ${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}<br>
             <em>Prices not publicly available</em>
         </div>`;
     });
 }
 
-/* ---------------- COMPARISON ---------------- */
+/* -------- COMPARISON -------- */
 function compare() {
     const fuel = document.getElementById("fuelType").value;
-    const target = document.getElementById("compareCountry").value;
+    const mode = document.getElementById("comparison").value;
 
-    const local = detectCountry();
-    const localData = AVERAGE_PRICES[local][fuel];
-    const targetData = AVERAGE_PRICES[target][fuel];
+    const from = mode === "UK_US" ? "UK" : "US";
+    const to = mode === "UK_US" ? "US" : "UK";
 
-    let localPerLitre = normalize(localData);
-    let targetPerLitre = normalize(targetData);
+    const fromVal = normalise(AVERAGES[from][fuel]);
+    const toVal = normalise(AVERAGES[to][fuel]);
 
     document.getElementById("compareResult").innerHTML = `
-        <strong>${fuel.toUpperCase()}</strong><br><br>
-        ${local}: £${localPerLitre.toFixed(2)} per litre<br>
-        ${target}: £${targetPerLitre.toFixed(2)} per litre<br><br>
-        ${localPerLitre < targetPerLitre
-            ? `${local} is cheaper`
-            : `${target} is cheaper`}
+        ${from}: £${fromVal.toFixed(2)} per litre<br>
+        ${to}: £${toVal.toFixed(2)} per litre<br><br>
+        <strong>${fromVal < toVal ? from + " is cheaper" : to + " is cheaper"}</strong>
     `;
 }
 
-function normalize(data) {
-    let value = data.value;
-
-    if (data.unit === "gallon")
-        value /= GALLON_TO_LITRE;
-
-    value = value / rates[data.currency];
-    value = value * rates.GBP;
-
-    return value;
-}
-
-function detectCountry() {
-    return navigator.language.startsWith("en-US") ? "US" : "UK";
+function normalise(data) {
+    let v = data.value;
+    if (data.unit === "gallon") v /= GALLON_TO_LITRE;
+    v = v / rates[data.currency];
+    return v * rates.GBP;
 }
 
 loadRates();
