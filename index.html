@@ -26,7 +26,7 @@ body {
 }
 
 .container {
-    max-width: 880px;
+    max-width: 860px;
     width: 100%;
     padding: 20px;
 }
@@ -39,7 +39,7 @@ h1 {
 .subtitle {
     text-align: center;
     color: var(--muted);
-    margin-bottom: 30px;
+    margin-bottom: 28px;
 }
 
 .card {
@@ -116,19 +116,11 @@ button:hover {
 <div class="container">
     <h1>Fuel Price Converter</h1>
     <div class="subtitle">
-        Convert fuel prices across units and currencies using live exchange rates
+        Convert fuel prices between volume units and currencies using live exchange rates
     </div>
 
     <div class="card">
         <div class="grid">
-            <div>
-                <label>Fuel type</label>
-                <select id="fuel">
-                    <option>Petrol</option>
-                    <option>Diesel</option>
-                </select>
-            </div>
-
             <div>
                 <label>Price</label>
                 <input type="number" id="price" placeholder="e.g. 3.79">
@@ -219,10 +211,10 @@ function convert() {
     const fromCur = document.getElementById("fromCurrency").value;
     const toCur = document.getElementById("toCurrency").value;
 
-    // Convert to price per litre
+    // Normalise to price per litre
     let perLitre = price / LITRES[fromUnit];
 
-    // Convert currency → EUR → target
+    // Currency conversion via EUR
     let eur = perLitre / rates[fromCur];
     let converted = eur * rates[toCur];
 
@@ -230,10 +222,10 @@ function convert() {
     converted *= LITRES[toUnit];
 
     document.getElementById("result").innerHTML =
-        `${converted.toFixed(3)} ${toCur} per ${labelUnit(toUnit)}`;
+        `${converted.toFixed(3)} ${toCur} per ${unitLabel(toUnit)}`;
 }
 
-function labelUnit(u) {
+function unitLabel(u) {
     if (u === "litre") return "litre";
     if (u === "usg") return "US gallon";
     if (u === "impg") return "Imperial gallon";
