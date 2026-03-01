@@ -2,228 +2,241 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fuel Price Comparator</title>
+<title>Fuel Price Converter</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
+:root {
+    --bg: #0f172a;
+    --card: #111827;
+    --accent: #38bdf8;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+}
+
 body {
-    font-family: system-ui, sans-serif;
-    background: #f4f6f9;
-    max-width: 1100px;
-    margin: auto;
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #020617, #0f172a);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 880px;
+    width: 100%;
     padding: 20px;
 }
-h1, h2 {
+
+h1 {
     text-align: center;
+    margin-bottom: 6px;
 }
+
+.subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 30px;
+}
+
+.card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.4);
+}
+
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
 }
-.card {
-    background: #fff;
-    padding: 18px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.08);
-}
+
 label {
+    font-size: .9rem;
+    color: var(--muted);
     display: block;
-    margin-top: 12px;
-    font-weight: 600;
+    margin-bottom: 6px;
 }
-select, input {
+
+input, select {
     width: 100%;
-    padding: 8px;
-    margin-top: 4px;
-}
-button {
-    margin-top: 14px;
-    width: 100%;
-    padding: 12px;
-    font-weight: bold;
-    background: #2563eb;
-    color: white;
+    padding: 10px;
+    border-radius: 8px;
     border: none;
-    border-radius: 6px;
+    background: #020617;
+    color: var(--text);
+    font-size: 1rem;
+}
+
+input:focus, select:focus {
+    outline: 2px solid var(--accent);
+}
+
+button {
+    margin-top: 22px;
+    width: 100%;
+    padding: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    color: #020617;
+    border: none;
+    border-radius: 10px;
     cursor: pointer;
 }
+
 button:hover {
-    background: #1e40af;
+    opacity: .9;
 }
-.station {
-    border-top: 1px solid #ddd;
-    margin-top: 10px;
-    padding-top: 10px;
-}
+
 .result {
-    margin-top: 14px;
-    font-weight: bold;
+    margin-top: 24px;
+    padding: 16px;
+    background: #020617;
+    border-radius: 10px;
     text-align: center;
+    font-size: 1.1rem;
 }
-.small {
-    margin-top: 12px;
-    font-size: 0.8rem;
-    color: #555;
+
+.footer {
+    margin-top: 16px;
     text-align: center;
-}
-.notice {
-    background: #eef2ff;
-    padding: 10px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    margin-top: 10px;
+    font-size: .8rem;
+    color: var(--muted);
 }
 </style>
 </head>
 
 <body>
 
-<h1>Fuel Price & Station Comparator</h1>
+<div class="container">
+    <h1>Fuel Price Converter</h1>
+    <div class="subtitle">
+        Convert fuel prices across units and currencies using live exchange rates
+    </div>
 
-<div class="notice">
-<strong>Important:</strong> Station locations are real. Fuel prices are <em>national averages</em>.
-Live station-level prices are not publicly available in the UK or US.
+    <div class="card">
+        <div class="grid">
+            <div>
+                <label>Fuel type</label>
+                <select id="fuel">
+                    <option>Petrol</option>
+                    <option>Diesel</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Price</label>
+                <input type="number" id="price" placeholder="e.g. 3.79">
+            </div>
+
+            <div>
+                <label>From unit</label>
+                <select id="fromUnit">
+                    <option value="litre">Per litre</option>
+                    <option value="usg">Per US gallon</option>
+                    <option value="impg">Per Imperial gallon</option>
+                </select>
+            </div>
+
+            <div>
+                <label>From currency</label>
+                <select id="fromCurrency">
+                    <option>USD</option>
+                    <option>GBP</option>
+                    <option>EUR</option>
+                    <option>CAD</option>
+                    <option>AUD</option>
+                </select>
+            </div>
+
+            <div>
+                <label>To unit</label>
+                <select id="toUnit">
+                    <option value="litre">Per litre</option>
+                    <option value="usg">Per US gallon</option>
+                    <option value="impg">Per Imperial gallon</option>
+                </select>
+            </div>
+
+            <div>
+                <label>To currency</label>
+                <select id="toCurrency">
+                    <option>USD</option>
+                    <option>GBP</option>
+                    <option>EUR</option>
+                    <option>CAD</option>
+                    <option>AUD</option>
+                </select>
+            </div>
+        </div>
+
+        <button onclick="convert()">Convert</button>
+
+        <div class="result" id="result">—</div>
+    </div>
+
+    <div class="footer" id="rateInfo">
+        Loading exchange rates…
+    </div>
+
+    <div class="footer">
+        Exchange rates via European Central Bank (Frankfurter API)
+    </div>
 </div>
-
-<div class="grid">
-
-<!-- STATIONS -->
-<div class="card">
-<h2>Nearest Fuel Stations</h2>
-<button onclick="locate()">Find nearest stations</button>
-<div id="stations"></div>
-</div>
-
-<!-- PRICE COMPARISON -->
-<div class="card">
-<h2>Average Fuel Price Comparison</h2>
-
-<label>Fuel type</label>
-<select id="fuelType">
-    <option value="petrol">Petrol</option>
-    <option value="diesel">Diesel</option>
-</select>
-
-<label>Compare</label>
-<select id="comparison">
-    <option value="UK_US">United Kingdom → United States</option>
-    <option value="US_UK">United States → United Kingdom</option>
-</select>
-
-<button onclick="compare()">Compare prices</button>
-<div class="result" id="compareResult"></div>
-</div>
-
-</div>
-
-<p class="small" id="rateInfo">Loading exchange rates…</p>
-
-<p class="small">
-Station data © OpenStreetMap contributors<br>
-Exchange rates © European Central Bank (via Frankfurter API)
-</p>
 
 <script>
-/* -------- CONSTANTS -------- */
-const GALLON_TO_LITRE = 3.785411784;
-
-/* -------- AVERAGE PRICES (clearly labelled) -------- */
-const AVERAGES = {
-    UK: {
-        petrol: { value: 1.45, unit: "litre", currency: "GBP" },
-        diesel: { value: 1.55, unit: "litre", currency: "GBP" }
-    },
-    US: {
-        petrol: { value: 3.60, unit: "gallon", currency: "USD" },
-        diesel: { value: 4.10, unit: "gallon", currency: "USD" }
-    }
+const LITRES = {
+    litre: 1,
+    usg: 3.785411784,
+    impg: 4.54609
 };
 
 let rates = {};
-let rateDate = "";
+let updated = "";
 
-/* -------- EXCHANGE RATES -------- */
 async function loadRates() {
-    try {
-        const res = await fetch("https://api.frankfurter.app/latest?from=USD");
-        const data = await res.json();
-        rates = data.rates;
-        rates.USD = 1;
-        rateDate = data.date;
-
-        document.getElementById("rateInfo").innerText =
-            `Exchange rates reference date: ${rateDate}`;
-    } catch {
-        document.getElementById("rateInfo").innerText =
-            "Exchange rates unavailable.";
-    }
-}
-
-/* -------- GEOLOCATION -------- */
-function locate() {
-    if (!navigator.geolocation) {
-        alert("Geolocation not supported");
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(pos => {
-        loadStations(pos.coords.latitude, pos.coords.longitude);
-    });
-}
-
-async function loadStations(lat, lon) {
-    const query = `
-    [out:json];
-    node["amenity"="fuel"](around:5000,${lat},${lon});
-    out;
-    `;
-
-    const res = await fetch("https://overpass-api.de/api/interpreter", {
-        method: "POST",
-        body: query
-    });
+    const res = await fetch("https://api.frankfurter.app/latest");
     const data = await res.json();
-    renderStations(data.elements.slice(0, 5));
+    rates = data.rates;
+    rates.EUR = 1;
+    updated = data.date;
+
+    document.getElementById("rateInfo").innerText =
+        `Exchange rates last updated: ${updated} (ECB reference rates)`;
 }
 
-function renderStations(stations) {
-    const el = document.getElementById("stations");
-    el.innerHTML = "";
+function convert() {
+    const price = parseFloat(document.getElementById("price").value);
+    if (isNaN(price)) return;
 
-    stations.forEach(s => {
-        el.innerHTML += `
-        <div class="station">
-            <strong>${s.tags.name || "Unnamed station"}</strong><br>
-            Fuel: petrol / diesel<br>
-            ${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}<br>
-            <em>Prices not publicly available</em>
-        </div>`;
-    });
+    const fromUnit = document.getElementById("fromUnit").value;
+    const toUnit = document.getElementById("toUnit").value;
+    const fromCur = document.getElementById("fromCurrency").value;
+    const toCur = document.getElementById("toCurrency").value;
+
+    // Convert to price per litre
+    let perLitre = price / LITRES[fromUnit];
+
+    // Convert currency → EUR → target
+    let eur = perLitre / rates[fromCur];
+    let converted = eur * rates[toCur];
+
+    // Convert litre → target unit
+    converted *= LITRES[toUnit];
+
+    document.getElementById("result").innerHTML =
+        `${converted.toFixed(3)} ${toCur} per ${labelUnit(toUnit)}`;
 }
 
-/* -------- COMPARISON -------- */
-function compare() {
-    const fuel = document.getElementById("fuelType").value;
-    const mode = document.getElementById("comparison").value;
-
-    const from = mode === "UK_US" ? "UK" : "US";
-    const to = mode === "UK_US" ? "US" : "UK";
-
-    const fromVal = normalise(AVERAGES[from][fuel]);
-    const toVal = normalise(AVERAGES[to][fuel]);
-
-    document.getElementById("compareResult").innerHTML = `
-        ${from}: £${fromVal.toFixed(2)} per litre<br>
-        ${to}: £${toVal.toFixed(2)} per litre<br><br>
-        <strong>${fromVal < toVal ? from + " is cheaper" : to + " is cheaper"}</strong>
-    `;
-}
-
-function normalise(data) {
-    let v = data.value;
-    if (data.unit === "gallon") v /= GALLON_TO_LITRE;
-    v = v / rates[data.currency];
-    return v * rates.GBP;
+function labelUnit(u) {
+    if (u === "litre") return "litre";
+    if (u === "usg") return "US gallon";
+    if (u === "impg") return "Imperial gallon";
 }
 
 loadRates();
