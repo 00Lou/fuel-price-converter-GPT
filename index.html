@@ -7,8 +7,8 @@
 
 <style>
 :root {
-    --bg: #0f172a;
-    --card: #111827;
+    --bg: #020617;
+    --card: #0f172a;
     --accent: #38bdf8;
     --text: #e5e7eb;
     --muted: #9ca3af;
@@ -16,19 +16,18 @@
 
 body {
     margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: system-ui, sans-serif;
     background: linear-gradient(135deg, #020617, #0f172a);
     color: var(--text);
     display: flex;
     justify-content: center;
-    align-items: center;
     min-height: 100vh;
 }
 
 .container {
-    max-width: 860px;
+    max-width: 980px;
     width: 100%;
-    padding: 20px;
+    padding: 24px;
 }
 
 h1 {
@@ -39,30 +38,30 @@ h1 {
 .subtitle {
     text-align: center;
     color: var(--muted);
-    margin-bottom: 28px;
+    margin-bottom: 30px;
 }
 
 .card {
     background: var(--card);
     border-radius: 14px;
     padding: 24px;
-    box-shadow: 0 20px 40px rgba(0,0,0,.4);
+    box-shadow: 0 20px 40px rgba(0,0,0,.45);
 }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 18px;
 }
 
 label {
-    font-size: .9rem;
+    font-size: .85rem;
     color: var(--muted);
-    display: block;
     margin-bottom: 6px;
+    display: block;
 }
 
-input, select {
+input, select, textarea {
     width: 100%;
     padding: 10px;
     border-radius: 8px;
@@ -72,7 +71,12 @@ input, select {
     font-size: 1rem;
 }
 
-input:focus, select:focus {
+textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+input:focus, select:focus, textarea:focus {
     outline: 2px solid var(--accent);
 }
 
@@ -89,21 +93,16 @@ button {
     cursor: pointer;
 }
 
-button:hover {
-    opacity: .9;
-}
-
 .result {
-    margin-top: 24px;
+    margin-top: 20px;
     padding: 16px;
     background: #020617;
     border-radius: 10px;
-    text-align: center;
-    font-size: 1.1rem;
+    font-size: .95rem;
 }
 
 .footer {
-    margin-top: 16px;
+    margin-top: 18px;
     text-align: center;
     font-size: .8rem;
     color: var(--muted);
@@ -116,14 +115,15 @@ button:hover {
 <div class="container">
     <h1>Fuel Price Converter</h1>
     <div class="subtitle">
-        Convert fuel prices between volume units and currencies using live exchange rates
+        Enter prices in pence / cents (e.g. UK 139.9, US 379.9)
     </div>
 
     <div class="card">
         <div class="grid">
+
             <div>
-                <label>Price</label>
-                <input type="number" id="price" placeholder="e.g. 3.79">
+                <label>Prices (one per line)</label>
+                <textarea id="prices" placeholder="139.9&#10;145.3&#10;152.7"></textarea>
             </div>
 
             <div>
@@ -133,52 +133,42 @@ button:hover {
                     <option value="usg">Per US gallon</option>
                     <option value="impg">Per Imperial gallon</option>
                 </select>
-            </div>
 
-            <div>
-                <label>From currency</label>
+                <label style="margin-top:12px;">From currency</label>
                 <select id="fromCurrency">
-                    <option>USD</option>
                     <option>GBP</option>
+                    <option>USD</option>
                     <option>EUR</option>
                     <option>CAD</option>
                     <option>AUD</option>
                 </select>
-            </div>
 
-            <div>
-                <label>To unit</label>
+                <label style="margin-top:12px;">To unit</label>
                 <select id="toUnit">
                     <option value="litre">Per litre</option>
                     <option value="usg">Per US gallon</option>
                     <option value="impg">Per Imperial gallon</option>
                 </select>
-            </div>
 
-            <div>
-                <label>To currency</label>
+                <label style="margin-top:12px;">To currency</label>
                 <select id="toCurrency">
-                    <option>USD</option>
                     <option>GBP</option>
+                    <option>USD</option>
                     <option>EUR</option>
                     <option>CAD</option>
                     <option>AUD</option>
                 </select>
             </div>
+
         </div>
 
-        <button onclick="convert()">Convert</button>
+        <button onclick="convertBatch()">Convert batch</button>
 
         <div class="result" id="result">—</div>
     </div>
 
-    <div class="footer" id="rateInfo">
-        Loading exchange rates…
-    </div>
-
-    <div class="footer">
-        Exchange rates via European Central Bank (Frankfurter API)
-    </div>
+    <div class="footer" id="rateInfo">Loading exchange rates…</div>
+    <div class="footer">Exchange rates via European Central Bank (Frankfurter API)</div>
 </div>
 
 <script>
@@ -188,48 +178,65 @@ const LITRES = {
     impg: 4.54609
 };
 
+const SUBUNITS = {
+    GBP: 100,
+    USD: 100,
+    EUR: 100,
+    CAD: 100,
+    AUD: 100
+};
+
 let rates = {};
-let updated = "";
 
 async function loadRates() {
     const res = await fetch("https://api.frankfurter.app/latest");
     const data = await res.json();
     rates = data.rates;
     rates.EUR = 1;
-    updated = data.date;
 
     document.getElementById("rateInfo").innerText =
-        `Exchange rates last updated: ${updated} (ECB reference rates)`;
+        `Exchange rates last updated: ${data.date} (ECB reference rates)`;
 }
 
-function convert() {
-    const price = parseFloat(document.getElementById("price").value);
-    if (isNaN(price)) return;
+function convertBatch() {
+    const lines = document.getElementById("prices").value
+        .split("\n")
+        .map(l => parseFloat(l.trim()))
+        .filter(v => !isNaN(v));
 
-    const fromUnit = document.getElementById("fromUnit").value;
-    const toUnit = document.getElementById("toUnit").value;
-    const fromCur = document.getElementById("fromCurrency").value;
-    const toCur = document.getElementById("toCurrency").value;
+    if (!lines.length) return;
 
-    // Normalise to price per litre
-    let perLitre = price / LITRES[fromUnit];
+    const fromUnit = fromUnitEl.value;
+    const toUnit = toUnitEl.value;
+    const fromCur = fromCurrency.value;
+    const toCur = toCurrency.value;
 
-    // Currency conversion via EUR
-    let eur = perLitre / rates[fromCur];
-    let converted = eur * rates[toCur];
+    let output = "<strong>Converted prices:</strong><br><br>";
 
-    // Convert litre → target unit
-    converted *= LITRES[toUnit];
+    lines.forEach(v => {
+        let major = v / SUBUNITS[fromCur];            // cents → dollars
+        let perLitre = major / LITRES[fromUnit];      // unit → litre
+        let eur = perLitre / rates[fromCur];          // → EUR
+        let converted = eur * rates[toCur];           // → target currency
+        converted *= LITRES[toUnit];                  // litre → unit
 
-    document.getElementById("result").innerHTML =
-        `${converted.toFixed(3)} ${toCur} per ${unitLabel(toUnit)}`;
+        output += `${v.toFixed(1)} → ${converted.toFixed(3)} ${toCur} per ${label(toUnit)}<br>`;
+    });
+
+    result.innerHTML = output;
 }
 
-function unitLabel(u) {
+function label(u) {
     if (u === "litre") return "litre";
     if (u === "usg") return "US gallon";
     if (u === "impg") return "Imperial gallon";
 }
+
+const fromUnitEl = document.getElementById("fromUnit");
+const toUnitEl = document.getElementById("toUnit");
+const fromCurrency = document.getElementById("fromCurrency");
+const toCurrency = document.getElementById("toCurrency");
+const result = document.getElementById("result");
 
 loadRates();
 </script>
